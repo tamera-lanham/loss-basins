@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 import dataclasses
 import torch as t
-from typing import Generator, Iterator, Optional, Tuple
+from typing import Callable, Generator, Iterator, Optional, Tuple
 
 
 @dataclasses.dataclass
 class TrainingParams:
     device: str = "cpu"
     lr: float = 1e-3
+    loss_function: Callable = t.nn.CrossEntropyLoss
 
 
 class ModelBase(ABC):
@@ -16,7 +17,7 @@ class ModelBase(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def train_generator(
+    def _train_generator(
         self, data_iter: Iterator[Tuple[t.Tensor, t.Tensor]]
     ) -> Generator[Tuple[t.Tensor, t.Tensor], None, None]:
         # Train for n_steps, data is an infinite iterator of (inputs, targets)

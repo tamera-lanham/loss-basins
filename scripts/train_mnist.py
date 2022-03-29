@@ -15,7 +15,18 @@ assert vec_2.equal(vec_rand)
 
 
 data = mnist(10)
-losses, activations = model.train(data, 5000)
+model.freeze()
+
+
+def set_rg(tensor):
+    tensor.requires_grad = True
+
+
+data_rg = [(set_rg(X), y) for i, (X, y) in enumerate(data) if i <= 1000]
+losses, activations = model.train(data_rg, 1000)
+# losses, activations = model.train_to_convergence(data, 0.05)
+print(losses[-1])
+
 
 vec_3 = model.get_params()
 assert not vec_3.equal(vec_2)
