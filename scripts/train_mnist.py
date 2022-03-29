@@ -1,6 +1,8 @@
-from loss_basins.models.mnist_conv import MnistConv, TrainingParams
+from loss_basins.models.mnist_conv import MnistConv
+from loss_basins.models.model_base import TrainingParams
 from loss_basins.data import mnist
 import torch as t
+from tqdm import tqdm
 
 model = MnistConv(training_params=TrainingParams())
 
@@ -15,16 +17,8 @@ assert vec_2.equal(vec_rand)
 
 
 data = mnist(10)
-model.freeze()
 
-
-def set_rg(tensor):
-    tensor.requires_grad = True
-
-
-data_rg = [(set_rg(X), y) for i, (X, y) in enumerate(data) if i <= 1000]
-losses, activations = model.train(data_rg, 1000)
-# losses, activations = model.train_to_convergence(data, 0.05)
+losses, activations = model.train_to_convergence(data, 0.05)
 print(losses[-1])
 
 
