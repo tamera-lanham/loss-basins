@@ -1,24 +1,23 @@
 from loss_basins.models.mnist_conv import MnistConv
-from loss_basins.models.model_base import TrainingParams
+from loss_basins.models.experimentation_mixin import TrainingParams
 from loss_basins.data import mnist
 import torch as t
 from tqdm import tqdm
 
-model = MnistConv(training_params=TrainingParams())
+model = MnistConv()
+model.training_params = TrainingParams()
 
 vec = model.get_params().clone().detach()
 
 vec_rand = t.rand(vec.shape)
-t.nn.utils.vector_to_parameters(vec_rand, model.model.parameters())
-
+model.set_params(vec_rand)
 vec_2 = model.get_params()
 assert not vec_2.equal(vec)
 assert vec_2.equal(vec_rand)
 
-
 data = mnist(10)
 
-losses, activations = model.train_to_convergence(data, 0.05)
+losses, activations = model.train_to_convergence(data, 0.1)
 print(losses[-1])
 
 
