@@ -1,7 +1,7 @@
 from loss_basins.utils.freezable_module import *
 
 
-class TestModel(nn.Module):
+class TestModel(FreezableModule, nn.Module):
     def __init__(self):
         super().__init__()
         self.conv_layers = nn.Sequential(nn.Conv2d(1, 4, 5), nn.ReLU(), nn.MaxPool2d(2))
@@ -22,7 +22,7 @@ def test_convert_and_freeze():
     ]
     for module, x in cases:
         y1 = module(x)
-        frozen_module = convert_to_freezable(module)
+        frozen_module = FreezableModule.convert(module)
         y2 = frozen_module(x)
         frozen_module.freeze()
         y3 = frozen_module(x)
@@ -31,17 +31,15 @@ def test_convert_and_freeze():
 
 
 def test_convert_recursive():
-    orig_model = TestModel()
-    model = convert_to_freezable(orig_model)
+    x = t.randn(3, 1, 10, 10)
+    model = TestModel()
+    y = model(x)
+
     model.freeze()
 
-    assert not model is orig_model
-    assert not any(isinstance(m, FreezableModule) for m in orig_model.modules())
     assert all(isinstance(m, FreezableModule) for m in model.modules())
     assert all(m.is_frozen() for m in model.modules())
 
-    x = t.randn(3, 1, 10, 10)
-    y = orig_model(x)
     y2 = model(x)
 
     assert y.allclose(y2)
@@ -67,21 +65,16 @@ def test_load_recursive():
     orig_model = TestModel()
     y = orig_model(x)
 
-    random_model = TestModel()
-    frozen_model = convert_to_freezable(random_model).freeze()
-    assert all(
-        p1.allclose(p2)
-        for (p1, p2) in zip(random_model.parameters(), frozen_model.parameters())
-    )
-    assert not y.allclose(frozen_model(x))
+    random_model = TestModel().freeze()
+    assert not y.allclose(random_model(x))
 
-    frozen_model.load_parameters(orig_model.parameters())
+    random_model.load_parameters(orig_model.parameters())
 
     assert all(
         p1.allclose(p2)
-        for (p1, p2) in zip(orig_model.parameters(), frozen_model.parameters())
+        for (p1, p2) in zip(orig_model.parameters(), random_model.parameters())
     )
-    assert y.allclose(frozen_model(x))
+    assert y.allclose(random_model(x))
 
 
 def test_keep_grad_fn():

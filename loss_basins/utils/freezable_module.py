@@ -4,16 +4,15 @@ import torch as t
 import torch.nn as nn
 
 
-class FreezableModule(nn.Module):
-    def __init__(self):
-        super().__init__()
-
+class FreezableModule:
     def is_frozen(self) -> bool:
         if not hasattr(self, "_frozen"):
             self._frozen = False
         return self._frozen
 
     def freeze(self, recurse=True):
+        self.convert_submodules_to_freezable()
+
         self.frozen_params = {
             name: param.detach().clone()
             for name, param in self.named_parameters(recurse=False)
@@ -85,8 +84,47 @@ class FreezableModule(nn.Module):
         )
         self.load_named_parameters(named_parameters)
 
+    @classmethod
+    def convert(cls, module: nn.Module) -> "FreezableModule":
+        module_mapping = {nn.Conv2d: FreezableConv2d, nn.Linear: FreezableLinear}
 
-class FreezableConv2d(nn.Conv2d, FreezableModule):
+        if isinstance(module, FreezableModule):
+            return module
+
+        if type(module) in module_mapping:
+            return module_mapping[type(module)].convert(module)
+
+        if next(module.parameters(recurse=False), None) is not None:
+            param_str = ", ".join([n for (n, p) in module.named_parameters()])
+            raise RuntimeError(
+                f"Unable to convert to FreezableModule: module {module.__class__} with parameters {param_str}"
+            )
+
+        module = deepcopy(module)
+        module.__class__ = type(
+            "FrozenModule", (FreezableModule, module.__class__), {}
+        )  # type: ignore
+        return module
+
+    def convert_submodules_to_freezable(self):
+        """Convert all submodules to FreezableModules"""
+
+        for name, child in self.named_children():
+            if not hasattr(self, name):
+                raise RuntimeError(
+                    f"Could not find child module {name} as an attribute on module {self}."
+                )
+
+            if not isinstance(getattr(self, name), nn.Module):
+                raise RuntimeError(
+                    f"Module {self} attribute {name} was type {type(name)}, not torch.nn.Module."
+                )
+
+            setattr(self, name, self.convert(child))
+            getattr(self, name).convert_submodules_to_freezable()
+
+
+class FreezableConv2d(FreezableModule, nn.Conv2d):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -122,7 +160,7 @@ class FreezableConv2d(nn.Conv2d, FreezableModule):
         return super().forward(x)
 
 
-class FreezableLinear(nn.Linear, FreezableModule):
+class FreezableLinear(FreezableModule, nn.Linear):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -147,36 +185,18 @@ class FreezableLinear(nn.Linear, FreezableModule):
         return super().forward(x)
 
 
-def convert_to_freezable(module: nn.Module) -> FreezableModule:
-    """Convert this module and all its submodules to a FreezableModule version"""
+class TestModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_layers = nn.Sequential(nn.Conv2d(1, 4, 5), nn.ReLU(), nn.MaxPool2d(2))
+        self.flatten = nn.Flatten(-3)
+        self.linear_layers = nn.Linear(36, 10)
 
-    module_mapping = {nn.Conv2d: FreezableConv2d, nn.Linear: FreezableLinear}
+    def forward(self, x):
+        y1 = self.conv_layers(x)
+        y2 = self.flatten(y1)
+        y3 = self.linear_layers(y2)
+        return y3
 
-    if type(module) in module_mapping:
-        return module_mapping[type(module)].convert(module)
 
-    if next(module.parameters(recurse=False), None) is not None:
-        param_str = ", ".join([n for (n, p) in module.named_parameters()])
-        raise RuntimeError(
-            f"Unable to convert to FreezableModule: module {module.__class__} with parameters {param_str}"
-        )
-
-    module = deepcopy(module)
-    module.__class__ = type(
-        "FrozenModule", (module.__class__, FreezableModule), {}
-    )  # type: ignore
-
-    for name, child in module.named_children():
-        if not hasattr(module, name):
-            raise RuntimeError(
-                f"Could not find child attribute {name} in module {module}."
-            )
-
-        if not isinstance(getattr(module, name), nn.Module):
-            raise RuntimeError(
-                f"Module {module.__class__} attribute {name} was type {type(name)}, not torch.nn.Module."
-            )
-
-        setattr(module, name, convert_to_freezable(child))
-
-    return module
+model = TestModel()

@@ -1,2 +1,2 @@
-from loss_basins.utils.freezable_module import FreezableModule, convert_to_freezable
+from loss_basins.utils.freezable_module import FreezableModule
 from loss_basins.utils.experimentation_mixin import ExperimentationMixin, TrainingParams
