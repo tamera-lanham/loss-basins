@@ -1,11 +1,10 @@
-from collections import OrderedDict
 from copy import deepcopy
 from typing import Iterator, Tuple
 import torch as t
 import torch.nn as nn
 
 
-class FrozenMixin(nn.Module):
+class FreezableModule(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -72,9 +71,9 @@ class FrozenMixin(nn.Module):
 
         for child_name, child_module in self.named_children():
             if child_name in child_params:
-                if not isinstance(child_module, FrozenMixin):
+                if not isinstance(child_module, FreezableModule):
                     raise RuntimeError(
-                        f"Trying to load parameters into non-FrozenMixin module {child_module}"
+                        f"Trying to load parameters into non-FreezableModule module {child_module}"
                     )
                 child_module.load_named_parameters(child_params[child_name])
 
@@ -87,7 +86,7 @@ class FrozenMixin(nn.Module):
         self.load_named_parameters(named_parameters)
 
 
-class Conv2d(nn.Conv2d, FrozenMixin):
+class FreezableConv2d(nn.Conv2d, FreezableModule):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -123,7 +122,7 @@ class Conv2d(nn.Conv2d, FrozenMixin):
         return super().forward(x)
 
 
-class Linear(nn.Linear, FrozenMixin):
+class FreezableLinear(nn.Linear, FreezableModule):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -148,28 +147,23 @@ class Linear(nn.Linear, FrozenMixin):
         return super().forward(x)
 
 
-class Sequential(nn.Sequential, FrozenMixin):
-    pass
+def convert_to_freezable(module: nn.Module) -> FreezableModule:
+    """Convert this module and all its submodules to a FreezableModule version"""
 
-
-def convert(module: nn.Module) -> FrozenMixin:
-    """Convert this module and all its submodules to a FrozenMixin version (where appropriate)"""
-    module_mapping = {nn.Conv2d: Conv2d, nn.Linear: Linear}
+    module_mapping = {nn.Conv2d: FreezableConv2d, nn.Linear: FreezableLinear}
 
     if type(module) in module_mapping:
         return module_mapping[type(module)].convert(module)
 
-    if isinstance(module, nn.Sequential):
-        # Assumes that no other modules have been added outside of _modules
-        return Sequential(
-            OrderedDict(
-                (name, convert(child)) for name, child in module.named_children()
-            )
+    if next(module.parameters(recurse=False), None) is not None:
+        param_str = ", ".join([n for (n, p) in module.named_parameters()])
+        raise RuntimeError(
+            f"Unable to convert to FreezableModule: module {module.__class__} with parameters {param_str}"
         )
 
     module = deepcopy(module)
     module.__class__ = type(
-        "FrozenModule", (module.__class__, FrozenMixin), {}
+        "FrozenModule", (module.__class__, FreezableModule), {}
     )  # type: ignore
 
     for name, child in module.named_children():
@@ -177,140 +171,12 @@ def convert(module: nn.Module) -> FrozenMixin:
             raise RuntimeError(
                 f"Could not find child attribute {name} in module {module}."
             )
-        setattr(module, name, convert(child))
+
+        if not isinstance(getattr(module, name), nn.Module):
+            raise RuntimeError(
+                f"Module {module.__class__} attribute {name} was type {type(name)}, not torch.nn.Module."
+            )
+
+        setattr(module, name, convert_to_freezable(child))
 
     return module
-
-
-###########################################################################
-
-
-class TestModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv_layers = nn.Sequential(nn.Conv2d(1, 4, 5), nn.ReLU(), nn.MaxPool2d(2))
-        self.flatten = nn.Flatten(-3)
-        self.linear_layers = nn.Linear(36, 10)
-
-    def forward(self, x):
-        y1 = self.conv_layers(x)
-        y2 = self.flatten(y1)
-        y3 = self.linear_layers(y2)
-        return y3
-
-
-def test_convert_and_freeze():
-    cases = [  # List of tuples (module, input)
-        (nn.Conv2d(1, 3, 5), t.randn((1, 1, 10, 10))),
-        (nn.Linear(10, 10), t.randn(3, 10)),
-    ]
-    for module, x in cases:
-        y1 = module(x)
-        frozen_module = convert(module)
-        y2 = frozen_module(x)
-        frozen_module.freeze()
-        y3 = frozen_module(x)
-        assert y1.allclose(y2)
-        assert y1.allclose(y3)
-
-
-def test_convert_recursive():
-    orig_model = TestModel()
-    model = convert(orig_model)
-    model.freeze()
-
-    assert not model is orig_model
-    assert not any(isinstance(m, FrozenMixin) for m in orig_model.modules())
-    assert all(isinstance(m, FrozenMixin) for m in model.modules())
-    assert all(m.is_frozen() for m in model.modules())
-
-    x = t.randn(3, 1, 10, 10)
-    y = orig_model(x)
-    y2 = model(x)
-
-    assert y.allclose(y2)
-
-
-def test_load_non_recursive():
-
-    x = t.randn((3, 1, 12, 15))
-    conv = Conv2d(1, 3, 5)
-    y = conv(x)
-
-    new_conv = Conv2d(1, 3, 5)
-    assert not y.allclose(new_conv(x))
-
-    new_conv.freeze()
-    new_conv.load_parameters(conv.parameters())
-    y2 = new_conv(x)
-    assert y.allclose(y2)
-
-
-def test_load_recursive():
-    x = t.randn(3, 1, 10, 10)
-    orig_model = TestModel()
-    y = orig_model(x)
-
-    random_model = TestModel()
-    frozen_model = convert(random_model).freeze()
-    assert all(
-        p1.allclose(p2)
-        for (p1, p2) in zip(random_model.parameters(), frozen_model.parameters())
-    )
-    assert not y.allclose(frozen_model(x))
-
-    frozen_model.load_parameters(orig_model.parameters())
-    assert y.allclose(frozen_model(x))
-
-
-def test_keep_grad_fn():
-
-    x = t.randn(5, 10)
-    lin = Linear(10, 10)
-    y = lin(x)
-
-    new_params = [param * 3 for param in lin.parameters()]
-    lin.freeze()
-    lin.load_parameters(new_params)
-    y2 = lin(x)
-
-    assert all(param.grad_fn.name() == "MulBackward0" for param in lin.parameters())
-    assert y2.allclose(y * 3, atol=1e-4)
-
-
-def test_train_perturbation():
-
-    x = t.randn((1, 1, 10, 10))
-    conv = Conv2d(1, 3, 5)
-    y = conv(x)
-
-    perturbations = [nn.Parameter(t.randn(param.shape)) for param in conv.parameters()]
-    new_params = [
-        param + perturb for param, perturb in zip(conv.parameters(), perturbations)
-    ]
-    conv.freeze()
-    conv.load_parameters(new_params)
-
-    initial_params = [p.detach().clone() for p in conv.parameters()]
-    initial_perturbs = [p.detach().clone() for p in perturbations]
-
-    y2 = conv(x)
-    loss = nn.functional.mse_loss(y, y2)
-    optimizer = t.optim.SGD(perturbations, lr=1e-1)
-    loss.backward()
-    optimizer.step()
-
-    for initial_param, param in zip(initial_params, conv.parameters()):
-        assert initial_param.allclose(param)
-
-    for initial_perturb, perturb in zip(initial_perturbs, perturbations):
-        assert not initial_perturb.allclose(perturb)
-
-
-if True:
-    test_convert_and_freeze()
-    test_convert_recursive()
-    test_load_non_recursive()
-    test_load_recursive()
-    test_keep_grad_fn()
-    test_train_perturbation()

@@ -2,7 +2,8 @@ import dataclasses
 import torch as t
 import torch.nn as nn
 from tqdm import tqdm
-from typing import Callable, Generator, Iterator, Optional, Tuple
+from typing import Callable, Generator, Iterable, Iterator, Optional, Tuple
+from loss_basins.utils.freezable_module import FreezableModule
 
 
 @dataclasses.dataclass
@@ -22,8 +23,8 @@ class ExperimentationMixin:
         def hook(model, input, output):
             self._activations.append(output.detach().clone())
 
-        for layer in self.layers:
-            layer.register_forward_hook(hook)
+        for module in self.modules():
+            module.register_forward_hook(hook)
 
     def _train_generator(
         self, data_iter: Iterator[Tuple[t.Tensor, t.Tensor]]
@@ -98,17 +99,22 @@ class ExperimentationMixin:
             outputs = self.forward(data)
         return outputs, self._activations.copy()
 
-    def freeze(self) -> None:
-        for p in self.parameters():
-            p.requires_grad = False
+    def params_to_vector(self) -> t.Tensor:
+        flat_params = [param.flatten() for param in self.parameters()]
+        return t.cat(flat_params)
 
-        assert [not p.requires_grad for p in self.parameters()]
+    def params_from_vector(self, vector: t.Tensor) -> t.Tensor:
+        assert len(vector.shape) == 1
 
-    def get_params(self) -> t.Tensor:
-        return t.cat([p.flatten() for p in self.parameters()]).clone().detach()
+        if isinstance(self, FreezableModule) and self.is_frozen():
+            shapes = [param.shape for param in self.parameters()]
+            widths = [t.tensor(shape).prod().item() for shape in shapes]
+            vector_split = vector.split(widths)
+            new_params = [
+                split.reshape(shape) for split, shape in zip(vector_split, shapes)
+            ]
 
-    def set_params(self, param_vector: t.Tensor) -> None:
-        nn.utils.vector_to_parameters(param_vector, self.parameters())
+            self.load_parameters(new_params)
 
-    def add_to_params(self, param_vector):
-        self.initialize(self.get_params() + param_vector)
+        else:
+            nn.utils.vector_to_parameters(vector, self.parameters())
