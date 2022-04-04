@@ -27,7 +27,7 @@ class ExperimentationMixin:
             module.register_forward_hook(hook)
 
     def _train_generator(
-        self, data_iter: Iterator[Tuple[t.Tensor, t.Tensor]]
+        self, data_iter: Iterator[Tuple[t.Tensor, t.Tensor]], params_to_optimize=None
     ) -> Generator[Tuple[t.Tensor, t.Tensor], None, None]:
         # Returns iterator of (loss, activations)
         # data is an infinite iterator of (inputs, targets)
@@ -36,7 +36,9 @@ class ExperimentationMixin:
 
         params = self.training_params
         self.to(params.device)
-        optimizer = t.optim.SGD(self.parameters(), params.lr)
+        if params_to_optimize is None:
+            params_to_optimize = self.parameters()
+        optimizer = t.optim.SGD(params_to_optimize, params.lr)
         loss_fn = params.loss_function()
 
         for i, (X, y) in enumerate(data_iter):
@@ -68,8 +70,9 @@ class ExperimentationMixin:
         data_iter: Iterator[Tuple[t.Tensor, t.Tensor]],
         threshold: float = 0.1,
         window_size: int = 10,
+        params_to_optimize=None,
     ) -> Tuple[list[t.Tensor], list[t.Tensor]]:
-        train_iter = self._train_generator(data_iter)
+        train_iter = self._train_generator(data_iter, params_to_optimize)
 
         losses, activations = [], []
         with tqdm() as pbar:
@@ -118,3 +121,6 @@ class ExperimentationMixin:
 
         else:
             nn.utils.vector_to_parameters(vector, self.parameters())
+
+    def n_params(self):
+        return sum([p.numel() for p in self.parameters()])

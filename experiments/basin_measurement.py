@@ -19,12 +19,19 @@ def basinDimensionality(model):
 
 
 def testDim(model, k, N):
-    pass
+    centered = intersect(model, k, N, off=False)
+    offset = intersect(model, k, N , off=True)
+    if centered and offset:
+        return "solution"
+    elif (not centered) and (not offset):
+        return "no solution"
+    else:
+        return "grey area"  # Technically there is a case "offset and (not centered)" which is very rare but gives information -- will ignore it here
 
-def normalize(vec, epsilon=0.001):
+def normalize(vec, epsilon):
     return epsilon*t.nn.functional.normalize(vec)
 
-def intersect(mdl, k, N, off):
+def intersect(mdl, k, N, off, threshold=1e-5):
     model = mdl.clone().detach()
     
     # Freeze weights
@@ -45,7 +52,18 @@ def intersect(mdl, k, N, off):
     # Train
     for ...:
         # Normalize perturbation and multiply by epsilon
-        # Add perturbation to 
+        # Add perturbation to the model
         perturbed = addToModel(model.freeze(), normalize(perturbation))
+        
+        output = perturbed.model.forward(...)
+
+        if loss < threshold:
+            return True
+
+        adjusted_loss = loss * (t.linalg.vector_norm(perturbation)).detach()
+
+    return False
+
+
 
 

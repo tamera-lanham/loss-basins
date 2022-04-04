@@ -17,7 +17,7 @@ def identity_normal(shape: tuple[int]):
 
 def fake_mnist(batch_size):
     input_shape, input_dtype = (batch_size, 1, 28, 28), t.float32
-    output_shape, ouptut_dtype = (batch_size,), t.int64
+    output_shape, ouptut_dtype = (batch_size,), t.int32
 
     while True:
         inputs = t.rand(input_shape, dtype=input_dtype)

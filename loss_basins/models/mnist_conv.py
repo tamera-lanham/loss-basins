@@ -1,10 +1,10 @@
-from loss_basins.utils import FreezableModule, ExperimentationMixin
+from loss_basins.utils import ExperimentationMixin, FreezableModule
 import torch as t
 import torch.nn as nn
 
 
-class MnistConv(FreezableModule, ExperimentationMixin):
-    def __init__(self):
+class MnistConv(FreezableModule, nn.Module, ExperimentationMixin):
+    def __init__(self, training_params=None):
         super().__init__()
         self.conv_layers = [
             nn.Conv2d(1, 6, 5),
@@ -20,7 +20,7 @@ class MnistConv(FreezableModule, ExperimentationMixin):
             *self.conv_layers, nn.Flatten(-3), *self.linear_layers
         )
 
-        self.init_mixin()
+        self.init_mixin(training_params)
 
     def forward(self, x):
         return self.layers(x)
