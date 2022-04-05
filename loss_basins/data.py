@@ -24,39 +24,52 @@ class Dataset:
             return self.multi_epoch(n_epochs, include_epoch_count)
         return self.inifinite_epochs(include_epoch_count)
 
-    def single_epoch(self) -> Iterator[T]:
+    def one_epoch(self) -> Iterator[T]:
         return self.generator_fn(*self.args, **self.kwargs)
 
-    def multi_epoch(
-        self, n_epochs: int, include_epoch_count=True
+    def epochs(
+        self, n_epochs: int, include_epoch_count=False
     ) -> Union[Iterator[Tuple[int, T]], Iterator[T]]:
         for i in range(n_epochs):
-            for x in self.single_epoch():
+            for x in self.one_epoch():
                 if include_epoch_count:
                     yield i, x
                 else:
                     yield x
 
     def inifinite_epochs(
-        self, include_epoch_count=True
+        self, include_epoch_count=False
     ) -> Union[Iterator[Tuple[int, T]], Iterator[T]]:
         i = 0
         while True:
-            for x in self.single_epoch():
+            for x in self.one_epoch():
                 if include_epoch_count:
                     yield i, x
                 else:
                     yield x
             i += 1
 
+    def batches(self, n_batches, include_epoch_count=False):
+        i = 0
+        for j, x in self.inifinite_epochs(include_epoch_count=True):
+            if i >= n_batches:
+                break
+
+            if include_epoch_count:
+                yield j, x
+            else:
+                yield x
+
+            i += 1
+
 
 def random_normal(
-    input_shape: tuple[int], output_shape: tuple[int], n_batches=1000
+    input_shape: tuple[int], output_shape: tuple[int], batches_per_epoch=1000
 ) -> Dataset:
     kwargs = locals()
 
     def epoch_generator(**kwargs) -> Iterator[tuple[t.Tensor, t.Tensor]]:
-        for _ in range(n_batches):
+        for _ in range(batches_per_epoch):
             inputs = t.randn(input_shape)
             outputs = t.randn(output_shape)
             yield inputs, outputs
@@ -64,20 +77,18 @@ def random_normal(
     return Dataset(epoch_generator, **kwargs)
 
 
-def identity_normal(
-    shape: tuple[int], n_batches=1000
-) -> Iterator[tuple[t.Tensor, t.Tensor]]:
+def identity_normal(shape: tuple[int], batches_per_epoch=1000) -> Dataset:
     kwargs = locals()
 
     def epoch_generator(**kwargs) -> Iterator[tuple[t.Tensor, t.Tensor]]:
-        for _ in range(n_batches):
+        for _ in range(batches_per_epoch):
             data = t.randn(shape)
             yield data, data
 
     return Dataset(epoch_generator, **kwargs)
 
 
-def fake_mnist(batch_size: int, train=True):
+def fake_mnist(batch_size: int, train=True) -> Dataset:
     kwargs = locals()
 
     def epoch_generator(**kwargs) -> Iterator[tuple[t.Tensor, t.Tensor]]:
@@ -114,7 +125,7 @@ def _mnist_loader(batch_size: int, train=True) -> Iterator[tuple[t.Tensor, t.Ten
     return loader
 
 
-def mnist(batch_size: int, train=True):
+def mnist(batch_size: int, train=True) -> Dataset:
     kwargs = locals()
 
     def epoch_generator(**kwargs) -> Iterator[tuple[t.Tensor, t.Tensor]]:

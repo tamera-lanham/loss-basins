@@ -183,20 +183,3 @@ class FreezableLinear(FreezableModule, nn.Linear):
             )
 
         return super().forward(x)
-
-
-class TestModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv_layers = nn.Sequential(nn.Conv2d(1, 4, 5), nn.ReLU(), nn.MaxPool2d(2))
-        self.flatten = nn.Flatten(-3)
-        self.linear_layers = nn.Linear(36, 10)
-
-    def forward(self, x):
-        y1 = self.conv_layers(x)
-        y2 = self.flatten(y1)
-        y3 = self.linear_layers(y2)
-        return y3
-
-
-model = TestModel()

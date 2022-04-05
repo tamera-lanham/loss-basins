@@ -1,13 +1,24 @@
 from loss_basins.models.mnist_conv import MnistConv
-from loss_basins.utils import TrainingParams
+from loss_basins.training import TrainingRun
 from loss_basins.data import mnist
 import torch as t
 from tqdm import tqdm
 
 model = MnistConv()
-model.training_params = TrainingParams()
+data = mnist(32)
 
-data = mnist(10)
+training_run = TrainingRun(model, data)
 
-losses, activations = model.train_to_convergence(data, 0.05)
-print(losses[-1])
+
+losses = training_run.to_convergence(0.3)
+
+test_data = mnist(100).one_epoch()
+n_correct, total = 0, 0
+for X, y in test_data:
+    with t.no_grad():
+        logits = model(X)
+        n_correct += (logits.argmax(dim=1) == y).sum()
+        total += X.shape[0]
+
+acc = (100 * n_correct / total).item()
+print(f"{acc:.2f}% accuracy")
