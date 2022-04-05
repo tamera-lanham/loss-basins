@@ -1,4 +1,7 @@
+from datetime import datetime
 from loss_basins.utils.freezable_module import FreezableModule
+import os
+from pathlib import Path
 import torch as t
 import torch.nn as nn
 from typing import Callable, Union
@@ -56,3 +59,44 @@ def params_from_vector(model, vector: t.Tensor):
 
 def n_params(model):
     return sum([p.numel() for p in model.parameters()])
+
+
+def freezable_to_normal(freezable_module: FreezableModule, normal_module: nn.Module):
+    freezable_state_dict = freezable_module.state_dict()
+    normal_module.load_state_dict(freezable_state_dict)
+    return normal_module
+
+
+def save_model(model, name=None, filename=None, saved_model_dir="_data/saved_models/"):
+    saved_model_dir = Path(saved_model_dir)
+    if not saved_model_dir.exists():
+        os.makedirs(saved_model_dir)
+
+    datestring = datetime.now().strftime("-%Y-%m-%d--%H-%M-%S")
+    name = model.__class__.__name__ if name is None else name
+    filename = name + datestring if filename is None else filename
+
+    is_jit_model = isinstance(model, t.jit._script.ScriptModule)
+
+    filename = filename.split(".")[0] + (".jit.pt" if is_jit_model else ".pt")
+    filepath = saved_model_dir.joinpath(filename)
+
+    if is_jit_model:
+        model.save(filepath)
+    else:
+        t.save(model, filepath)
+
+
+def load_model(prefix="", saved_model_dir="_data/saved_models/"):
+    saved_model_dir = Path(saved_model_dir)
+    paths = [
+        saved_model_dir.joinpath(filename)
+        for filename in os.listdir(saved_model_dir)
+        if str(filename).startswith(prefix)
+    ]
+    filename = max(paths, key=os.path.getctime)
+
+    if ".jit" in str(filename):
+        return t.jit.load(filename)
+
+    return t.load(filename)

@@ -4,7 +4,13 @@ from loss_basins.data import mnist
 import torch as t
 import torch.nn as nn
 
-from loss_basins.utils import FreezableModule, params_from_vector, params_to_vector
+from loss_basins.utils import (
+    FreezableModule,
+    params_from_vector,
+    params_to_vector,
+    freezable_to_normal,
+)
+from loss_basins.utils.utils import save_model
 
 
 def normalize(vec, epsilon):
@@ -39,3 +45,6 @@ class PerturbationTrainingRun(TrainingRun):
 
 training_run = PerturbationTrainingRun(f_model, data, params_to_optimize=[perturbation])
 losses = training_run.to_convergence(0.2)
+
+
+save_model(freezable_to_normal(f_model, MnistConv()))

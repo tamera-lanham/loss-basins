@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from copy import deepcopy
 from typing import Iterator, Tuple
 import torch as t
@@ -84,6 +85,16 @@ class FreezableModule:
         )
         self.load_named_parameters(named_parameters)
 
+    def state_dict(self) -> OrderedDict[str, t.Tensor]:
+        if self.is_frozen():
+            return OrderedDict(self.named_parameters())
+        return super().state_dict()
+
+    def load_state_dict(self, state_dict: OrderedDict[str, t.Tensor]):
+        if self.is_frozen():
+            self.load_named_parameters(state_dict.items())
+        return super().load_state_dict(state_dict)
+
     @classmethod
     def convert(cls, module: nn.Module) -> "FreezableModule":
         module_mapping = {nn.Conv2d: FreezableConv2d, nn.Linear: FreezableLinear}
@@ -102,7 +113,7 @@ class FreezableModule:
 
         module = deepcopy(module)
         module.__class__ = type(
-            "FrozenModule", (FreezableModule, module.__class__), {}
+            "FreezableModule", (FreezableModule, module.__class__), {}
         )  # type: ignore
         return module
 

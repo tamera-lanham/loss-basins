@@ -2,20 +2,19 @@ from loss_basins.data import identity_normal
 from loss_basins.utils.utils import *
 import torch.nn as nn
 
-model = nn.Sequential(
-    nn.Linear(5, 50),
-    nn.ReLU(),
-    nn.Linear(50, 5),
-)
-
 
 def test_activations():
 
+    model = nn.Sequential(
+        nn.Linear(5, 50),
+        nn.ReLU(),
+        nn.Linear(50, 5),
+    )
+
     data = identity_normal((10, 5))
-    batches = list(data.batches(2))
     activations_holder = Activations(model)
 
-    (X0, y0), (X1, y1) = batches
+    (X0, y0), (X1, y1) = data.batches(2)
     model(X0)
     activations_0 = activations_holder.get()
 
@@ -34,6 +33,13 @@ def test_activations():
 
 
 def test_param_vector():
+
+    model = nn.Sequential(
+        nn.Linear(5, 50),
+        nn.ReLU(),
+        nn.Linear(50, 5),
+    )
+
     params = [p.clone() for p in model.parameters()]
     vector = params_to_vector(model)
 

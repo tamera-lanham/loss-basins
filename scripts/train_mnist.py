@@ -10,9 +10,9 @@ data = mnist(32)
 training_run = TrainingRun(model, data)
 
 
-losses = training_run.to_convergence(0.3)
+losses = training_run.to_convergence(0.2)
 
-test_data = mnist(100).one_epoch()
+test_data = mnist(100, test=True).one_epoch()
 n_correct, total = 0, 0
 for X, y in test_data:
     with t.no_grad():
