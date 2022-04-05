@@ -5,7 +5,7 @@ import torch as t
 import torch.nn as nn
 
 
-class TestModel(nn.Module):
+class Model(nn.Module):
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(
@@ -19,7 +19,7 @@ class TestModel(nn.Module):
 
 
 def test_get_activations():
-    model = TestModel()
+    model = Model()
     data = identity_normal((10, 5))
     training_params = TrainingParams(loss_function=nn.MSELoss(), get_activations=True)
     training_run = TrainingRun(model, data, training_params)
@@ -38,7 +38,7 @@ def test_get_activations():
 
 
 def test_train_to_convergence():
-    model = TestModel()
+    model = Model()
     data = identity_normal((100, 5))
     training_params = TrainingParams(loss_function=nn.MSELoss())
     training_run = TrainingRun(model, data, training_params)

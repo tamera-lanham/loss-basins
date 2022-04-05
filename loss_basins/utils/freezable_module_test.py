@@ -1,7 +1,7 @@
 from loss_basins.utils.freezable_module import *
 
 
-class TestModel(FreezableModule, nn.Module):
+class Model(FreezableModule, nn.Module):
     def __init__(self):
         super().__init__()
         self.conv_layers = nn.Sequential(nn.Conv2d(1, 4, 5), nn.ReLU(), nn.MaxPool2d(2))
@@ -32,7 +32,7 @@ def test_convert_and_freeze():
 
 def test_convert_recursive():
     x = t.randn(3, 1, 10, 10)
-    model = TestModel()
+    model = Model()
     y = model(x)
 
     model.freeze()
@@ -62,10 +62,10 @@ def test_load_non_recursive():
 
 def test_load_recursive():
     x = t.randn(3, 1, 10, 10)
-    orig_model = TestModel()
+    orig_model = Model()
     y = orig_model(x)
 
-    random_model = TestModel().freeze()
+    random_model = Model().freeze()
     assert not y.allclose(random_model(x))
 
     random_model.load_parameters(orig_model.parameters())
