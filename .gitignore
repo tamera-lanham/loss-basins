@@ -7,4 +7,6 @@ __pycache__/
 .vscode/
 
 _data/
+_keys/
+lightning_logs/
 sandbox.*

@@ -77,7 +77,7 @@ def random_normal(
     return Dataset(epoch_generator, **kwargs)
 
 
-def identity_normal(shape: tuple[int], batches_per_epoch=1000) -> Dataset:
+def identity_normal(shape: tuple[int], batches_per_epoch: int = 1000) -> Dataset:
     kwargs = locals()
 
     def epoch_generator(**kwargs) -> Iterator[tuple[t.Tensor, t.Tensor]]:
@@ -113,7 +113,7 @@ def fake_mnist(batch_size: int, train=True) -> Dataset:
     return Dataset(epoch_generator, **kwargs)
 
 
-def _mnist_loader(batch_size: int, train=True) -> Iterator[tuple[t.Tensor, t.Tensor]]:
+def mnist_loader(batch_size: int, train=True, num_workers=0) -> t.utils.data.DataLoader:
 
     dataset = torchvision.datasets.MNIST(
         root="./_data",
@@ -121,7 +121,9 @@ def _mnist_loader(batch_size: int, train=True) -> Iterator[tuple[t.Tensor, t.Ten
         download=True,
         transform=torchvision.transforms.ToTensor(),
     )
-    loader = t.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    loader = t.utils.data.DataLoader(
+        dataset, batch_size=batch_size, shuffle=train, num_workers=num_workers
+    )
     return loader
 
 
@@ -129,7 +131,7 @@ def mnist(batch_size: int, train=True) -> Dataset:
     kwargs = locals()
 
     def epoch_generator(**kwargs) -> Iterator[tuple[t.Tensor, t.Tensor]]:
-        data = _mnist_loader(batch_size, train=train)
+        data = mnist_loader(batch_size, train=train)
 
         for X, y in data:
             yield X, y
