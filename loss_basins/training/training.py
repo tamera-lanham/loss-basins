@@ -113,7 +113,7 @@ class TrainingRun:
         self, threshold: float = 0.1, window_size: int = 10
     ) -> Tuple[list[float], list[t.Tensor]]:
 
-        train_iter = self._train_generator(self.data.inifinite_epochs(False))
+        train_iter = self._train_generator(self.data.infinite_epochs(False))
 
         losses, activations = [], []
         with tqdm(train_iter) as pbar:

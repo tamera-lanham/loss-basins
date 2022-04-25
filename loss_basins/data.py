@@ -22,7 +22,7 @@ class Dataset:
     ) -> Union[Iterator[Tuple[int, T]], Iterator[T]]:
         if n_epochs is not None:
             return self.multi_epoch(n_epochs, include_epoch_count)
-        return self.inifinite_epochs(include_epoch_count)
+        return self.infinite_epochs(include_epoch_count)
 
     def one_epoch(self) -> Iterator[T]:
         return self.generator_fn(*self.args, **self.kwargs)
@@ -37,7 +37,7 @@ class Dataset:
                 else:
                     yield x
 
-    def inifinite_epochs(
+    def infinite_epochs(
         self, include_epoch_count=False
     ) -> Union[Iterator[Tuple[int, T]], Iterator[T]]:
         i = 0
@@ -51,7 +51,7 @@ class Dataset:
 
     def batches(self, n_batches, include_epoch_count=False):
         i = 0
-        for j, x in self.inifinite_epochs(include_epoch_count=True):
+        for j, x in self.infinite_epochs(include_epoch_count=True):
             if i >= n_batches:
                 break
 

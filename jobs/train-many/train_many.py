@@ -32,7 +32,7 @@ def build_params():
     use_gpu = bool(n_gpus)
 
     params = Parameters(
-        n_models=1000,
+        n_models=100,
         n_processes=n_gpus if use_gpu else 2,
         device_type="gpu" if use_gpu else "cpu",
         model_fn=MnistConv,
@@ -40,7 +40,7 @@ def build_params():
         val_loader_fn=val_loader_fn,
         optimizer_kwargs={"lr": 1e-3},
         batch_size=100,
-        loss_threshold=2.2,
+        loss_threshold=0.2,
     )
 
     return params
@@ -127,9 +127,9 @@ def save_dir_to_gcs(directory: Path, bucket, gcs_dir: str):
 def train_one(rank, params: Parameters, output_path):
 
     if params.device_type == "gpu":
-        device_n = rank
+        gpus = [rank]
     else:
-        device_n = -1
+        gpus = None
 
     model = LightningModel(
         params.model_fn(),
@@ -146,7 +146,8 @@ def train_one(rank, params: Parameters, output_path):
 
     trainer = pl.Trainer(
         accelerator=params.device_type,
-        devices=device_n,
+        gpus=gpus,
+        logger=False,
         num_processes=1,
         callbacks=[progress_bar, checkpoint, early_stop],
         enable_checkpointing=False,
