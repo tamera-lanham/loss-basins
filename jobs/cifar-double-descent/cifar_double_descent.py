@@ -141,7 +141,7 @@ def train(params: Parameters, train_loader, val_loader, output_path: str):
         num_processes=1,
         callbacks=[progress_bar, checkpoint],
         enable_checkpointing=False,
-        max_epochs=epochs,
+        max_epochs=params.epochs,
     )
 
     trainer.fit(model, train_loader, val_loader)
@@ -150,7 +150,7 @@ def train(params: Parameters, train_loader, val_loader, output_path: str):
 
 
 if __name__ == "__main__":
-    params = Parameters(device_type='gpu')
+    params = Parameters(device_type="gpu", epochs=100)
 
     trainloader, testloader = get_dataloaders(
         batch_size=params.batch_size,

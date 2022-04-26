@@ -30,7 +30,7 @@ pyenv install 3.9.12
 pyenv shell 3.9.12
 
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-~/.poetry/bin/poetry env use /home/ubuntu/.pyenv/versions/3.9.12/bin/python
+~/.poetry/bin/poetry env use ~/.pyenv/versions/3.9.12/bin/python
 cd ~/loss-basins && ~/.poetry/bin/poetry install
 cd ~/loss-basins && ~/.poetry/bin/poetry run python jobs/train-many/train_many.py
 "
