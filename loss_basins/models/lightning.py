@@ -4,9 +4,11 @@ import pytorch_lightning as pl
 from typing import Callable, Iterable, Optional
 import torch as t
 from torch import nn
+import torch.nn.functional as F
 from pytorch_lightning.callbacks import Callback
 from loss_basins.models.cifar_conv import ConvNet
 from loss_basins.models.mnist_conv import MnistConv
+from loss_basins.models.resnet import make_resnet18k
 
 
 class LightningModel(pl.LightningModule):
@@ -37,7 +39,7 @@ class LightningModel(pl.LightningModule):
         loss = self.loss_fn(y_pred, y)
         return loss
 
-    def training_step(self, batch):
+    def training_step(self, batch, batch_idx):
         loss = self._get_loss(batch)
         self.log("train_loss", loss, prog_bar=True)
         return loss
@@ -54,7 +56,24 @@ class LightningModel(pl.LightningModule):
         return optimizer
 
 
-def MnistConvLightning(**kwargs):
+def ResNetLightning(
+    loss_fn=None, optimizer_class=None, optimizer_kwargs=None, **kwargs
+):
+
+    if loss_fn is None:
+        loss_fn = F.cross_entropy
+    if optimizer_class is None:
+        optimizer_class = t.optim.SGD
+
+    return LightningModel(
+        make_resnet18k(**kwargs),
+        loss_fn,
+        optimizer_class,
+        optimizer_kwargs,
+    )
+
+
+def MnistLightning(**kwargs):
     return LightningModel(MnistConv(), **kwargs)
 
 
