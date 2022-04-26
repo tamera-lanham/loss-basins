@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import TQDMProgressBar
 from dataclasses import dataclass, field
 from loss_basins.models import ResNetLightning
-from loss_basins.callbacks import SaveModelState
+from loss_basins.callbacks import SaveModelState, CopyToGCS
 
 
 @dataclass
@@ -109,12 +109,13 @@ def train(params: Parameters, train_loader, val_loader, output_path: str):
 
     progress_bar = TQDMProgressBar()
     checkpoint = SaveModelState(output_path, every_n_epochs=1)
+    copy_to_gcs = CopyToGCS(output_path, "loss-basins", "cifar-dd")
 
     trainer = pl.Trainer(
         accelerator=params.device_type,
         logger=False,
         num_processes=1,
-        callbacks=[progress_bar, checkpoint],
+        callbacks=[progress_bar, checkpoint, copy_to_gcs],
         enable_checkpointing=False,
         max_epochs=params.epochs,
     )
@@ -131,7 +132,7 @@ if __name__ == "__main__":
     # ~/.poetry/bin/poetry shell
     # python jobs/cifar-double-descent/cifar-double-descent.py
 
-    params = Parameters(device_type="gpu", epochs=100)
+    params = Parameters(device_type="cpu", epochs=2)
 
     trainloader, testloader = get_dataloaders(
         batch_size=params.batch_size,

@@ -4,13 +4,13 @@ import shutil
 from google.cloud import storage
 from google.oauth2 import service_account
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 from numpy import isin
 
 
 class GCS:
-    def __init__(self, bucket_name, key_path=None):
+    def __init__(self, bucket_name: str, key_path: Optional[Union[Path, str]] = None):
 
         # Get the service account key
         if key_path is None:

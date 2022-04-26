@@ -1,1 +1,2 @@
 from loss_basins.callbacks.save_model_state import SaveModelState
+from loss_basins.callbacks.copy_to_gcs import CopyToGCS

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional, Union
 from pytorch_lightning.callbacks import Callback
 import torch as t
 
@@ -7,11 +8,11 @@ import torch as t
 class SaveModelState(Callback):
     def __init__(
         self,
-        output_path,
-        every_n_epochs=None,
-        every_n_batches=None,
-        save_init=True,
-        single_file=False,
+        output_path: Union[Path, str],
+        every_n_epochs: Optional[int] = None,
+        every_n_batches: Optional[int] = None,
+        save_init: bool = True,
+        single_file: bool = False,
     ):
         self.output_path = Path(output_path)
         self.every_n_epochs = every_n_epochs
