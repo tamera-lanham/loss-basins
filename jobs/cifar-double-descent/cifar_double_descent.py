@@ -150,8 +150,7 @@ def train(params: Parameters, train_loader, val_loader, output_path: str):
 
 
 if __name__ == "__main__":
-    print("!!")
-    params = Parameters()
+    params = Parameters(device_type='gpu')
 
     trainloader, testloader = get_dataloaders(
         batch_size=params.batch_size,
