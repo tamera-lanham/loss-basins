@@ -17,6 +17,7 @@ from typing import Callable, Optional
 from loss_basins.data import mnist_loader
 from loss_basins.models import LightningModel, MnistConv
 from loss_basins.callbacks import SaveModelState
+from loss_basins.utils import timestamp
 
 
 def train_loader_fn():
@@ -85,10 +86,6 @@ class Parameters:
 def random_id(n=8):
     char_set = string.ascii_uppercase + string.ascii_lowercase + string.digits
     return "".join(random.choice(char_set) for _ in range(n))
-
-
-def timestamp():
-    return datetime.datetime.now().strftime("%Y-%m-%d--%H-%M")
 
 
 def setup(params: Parameters):

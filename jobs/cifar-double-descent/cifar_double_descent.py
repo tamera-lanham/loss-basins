@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 import torch as t
 import torch.nn.functional as F
@@ -10,6 +11,7 @@ from pytorch_lightning.callbacks import TQDMProgressBar
 from dataclasses import dataclass, field
 from loss_basins.models import ResNetLightning
 from loss_basins.callbacks import SaveModelState, CopyToGCS
+from loss_basins.utils import timestamp
 
 
 @dataclass
@@ -109,7 +111,7 @@ def train(params: Parameters, train_loader, val_loader, output_path: str):
 
     progress_bar = TQDMProgressBar()
     checkpoint = SaveModelState(output_path, every_n_epochs=1)
-    copy_to_gcs = CopyToGCS(output_path, "loss-basins", "cifar-dd")
+    copy_to_gcs = CopyToGCS(output_path, "loss-basins", Path(output_path).name)
 
     trainer = pl.Trainer(
         accelerator=params.device_type,
@@ -139,4 +141,9 @@ if __name__ == "__main__":
         label_noise=params.label_noise,
     )
 
-    train(params, trainloader, testloader, output_path="./_data/cifar_double_descent")
+    train(
+        params,
+        trainloader,
+        testloader,
+        output_path="./_data/cifar_double_descent-" + timestamp(),
+    )

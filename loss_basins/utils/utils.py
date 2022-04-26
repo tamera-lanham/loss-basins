@@ -35,6 +35,10 @@ class Activations:
         self.remove_hooks()
 
 
+def timestamp():
+    return datetime.now().strftime("%Y-%m-%d--%H-%M")
+
+
 def params_to_vector(model) -> t.Tensor:
     flat_params = [param.flatten() for param in model.parameters()]
     return t.cat(flat_params)
@@ -72,9 +76,8 @@ def save_model(model, name=None, filename=None, saved_model_dir="_data/saved_mod
     if not saved_model_dir.exists():
         os.makedirs(saved_model_dir)
 
-    datestring = datetime.now().strftime("-%Y-%m-%d--%H-%M-%S")
     name = model.__class__.__name__ if name is None else name
-    filename = name + datestring if filename is None else filename
+    filename = name + "-" + timestamp() if filename is None else filename
 
     is_jit_model = isinstance(model, t.jit._script.ScriptModule)
 
