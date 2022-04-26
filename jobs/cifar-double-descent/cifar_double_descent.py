@@ -1,40 +1,15 @@
 from dataclasses import dataclass
 from typing import Callable
 import torch as t
-import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
-import torch.backends.cudnn as cudnn
 import numpy as np
 import torchvision
 import torchvision.transforms as transforms
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import TQDMProgressBar
-
-
-import os
-from dataclasses import dataclass, field, asdict
-import argparse
-
-import matplotlib.pyplot as plt
-import matplotlib.colors
-import time
-import copy
-
-from loss_basins.models.lightning import ResNetLightning, SaveModelState
-
-
-# Build a ResNet
-# Load data (and transform) (and add label noise)
-# Train, saving things along the way
-#
-
-# Hyperparams
-batch_size = 128
-label_noise = 0.2
-device_type = "gpu"
-epochs = 5
+from dataclasses import dataclass, field
+from loss_basins.models import ResNetLightning
+from loss_basins.callbacks import SaveModelState
 
 
 @dataclass
@@ -150,6 +125,12 @@ def train(params: Parameters, train_loader, val_loader, output_path: str):
 
 
 if __name__ == "__main__":
+
+    # To run on paperspace:
+    # cd ~/loss-basins
+    # ~/.poetry/bin/poetry shell
+    # python jobs/cifar-double-descent/cifar-double-descent.py
+
     params = Parameters(device_type="gpu", epochs=100)
 
     trainloader, testloader = get_dataloaders(

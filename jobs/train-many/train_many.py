@@ -15,8 +15,8 @@ import string
 import torch as t
 from typing import Callable, Optional
 from loss_basins.data import mnist_loader
-from loss_basins.models.lightning import LightningModel, SaveModelState
-from loss_basins.models.mnist_conv import MnistConv
+from loss_basins.models import LightningModel, MnistConv
+from loss_basins.callbacks import SaveModelState
 
 
 def train_loader_fn():
