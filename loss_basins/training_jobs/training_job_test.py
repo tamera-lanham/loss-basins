@@ -15,6 +15,9 @@ def test_training_job():
 
     assert len(list((job.output_path / "inits").iterdir())) == 5
 
+    for init in (job.output_path / "inits").iterdir():
+        assert len(list(init.iterdir())) == job.metadata.epochs + 1
+
     # Cleanup
     shutil.rmtree(job.output_path)
 

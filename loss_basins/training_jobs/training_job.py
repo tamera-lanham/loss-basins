@@ -25,6 +25,13 @@ class TrainingJob:
         self.metadata = metadata
         self.output_path = Path("./_data/", self.__class__.__name__ + "_" + timestamp())
 
+        self.default_trainer_kwargs = {
+            "accelerator": "gpu" if t.cuda.is_available() else "cpu",
+            "logger": False,
+            "num_processes": 1,
+            "enable_checkpointing": False,
+        }
+
     def model(self, metadata: Metadata) -> pl.LightningModule:
         raise NotImplementedError("Should be implemented by subclass")
 
@@ -46,7 +53,24 @@ class TrainingJob:
         raise NotImplementedError("Should be implemented by subclass")
 
     def run_init(self, init_metadata: Metadata, trainer: pl.Trainer):
-        raise NotImplementedError("Should be implemented by subclass")
+
+        train_loader, val_loader = self.data_loaders(init_metadata)
+        model = self.model(init_metadata)
+
+        trainer.fit(model, train_loader, val_loader)
+
+    def run(self, n_processes: Optional[int] = None):
+        self._save_training_job_info()
+
+        if not n_processes:
+            n_processes = 4
+
+        init_metadata_iter = self.generate_init_metadata(self.metadata)
+        with Pool(n_processes) as pool:
+            pool.map(self._run_init_wrapper, init_metadata_iter)
+
+        if self.metadata.gcs_bucket:
+            self._save_outputs_to_gcs()
 
     def generate_init_metadata(
         self, training_job_metadata: Metadata
@@ -56,16 +80,6 @@ class TrainingJob:
             init_id, init_metadata = str(i), training_job_metadata
             yield init_id, init_metadata
 
-    def run(self, n_processes: int = 4):
-        self._save_training_job_info()
-
-        init_metadata_iter = self.generate_init_metadata(self.metadata)
-        with Pool(n_processes) as pool:
-            pool.map(self._run_init_wrapper, init_metadata_iter)
-
-        if self.metadata.gcs_bucket:
-            self._save_outputs_to_gcs()
-
     def _run_init_wrapper(self, init_id_and_metadata: Tuple[str, Metadata]):
         init_id, init_metadata = init_id_and_metadata
 
@@ -73,9 +87,12 @@ class TrainingJob:
         trainer = self.trainer(init_metadata)
         trainer.callbacks = trainer.callbacks + self.callbacks(init_id, init_metadata)
 
+        # May have to manually set trainer.gpus here from process rank if pl doesn't schedule properly
+
         self.run_init(init_metadata, trainer)
 
     def _test_run(self):
+        # Just to see if something isn't working :)
         train_loader, val_loader = self.data_loaders(self.metadata)
         model = self.model(self.metadata)
         trainer = self.trainer(self.metadata)

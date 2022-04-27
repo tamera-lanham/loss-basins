@@ -60,18 +60,6 @@ class ExampleTrainingJob(TrainingJob):
 
     def trainer(self, init_metadata: ExampleJobMetadata):
 
-        trainer = pl.Trainer(
-            accelerator="cpu",
-            logger=False,
-            num_processes=1,
-            enable_checkpointing=False,
-            max_epochs=init_metadata.epochs,
+        return pl.Trainer(
+            **self.default_trainer_kwargs, max_epochs=init_metadata.epochs
         )
-
-        return trainer
-
-    def run_init(self, init_metadata: ExampleJobMetadata, trainer: pl.Trainer):
-        train_loader, val_loader = self.data_loaders(init_metadata)
-        model = self.model(init_metadata)
-
-        trainer.fit(model, train_loader, val_loader)
