@@ -24,30 +24,16 @@ class TrainingJob:
     def __init__(self, metadata: Metadata):
         self.metadata = metadata
         self.output_path = Path("./_data/", self.__class__.__name__ + "_" + timestamp())
-        if not self.output_path.exists():
-            os.makedirs(self.output_path)
 
-        self._save_training_job_metadata()
-        self._save_model()
+    def model(self, metadata: Metadata) -> pl.LightningModule:
+        raise NotImplementedError("Should be implemented by subclass")
 
-    def _save_training_job_metadata(self):
-        with open(self.output_path / "training_job_metadata.json", "w") as f:
-            json.dump(asdict(self.metadata), f)
+    def data_loaders(
+        self, metadata: Metadata
+    ) -> Tuple[t.utils.data.DataLoader, t.utils.data.DataLoader]:
+        raise NotImplementedError("Should be implemented by subclass")
 
-    def _save_model(self):
-        # Currently using job metadata, not init metadata
-        model = self.model(self.metadata)
-
-        scripted_model = model.to_torchscript()
-        t.jit.save(scripted_model, self.output_path / "model_torchscript.pt")
-
-    def model(self, metadata: Metadata):
-        raise NotImplementedError()
-
-    def data_loaders(self, metadata: Metadata):
-        raise NotImplementedError()
-
-    def callbacks(self, init_id: str, init_metadata: Metadata):
+    def callbacks(self, init_id: str, init_metadata: Metadata) -> Iterable[pl.Callback]:
         progress_bar = pl.callbacks.TQDMProgressBar()
 
         checkpoint = SaveModelState(
@@ -56,8 +42,11 @@ class TrainingJob:
 
         return [progress_bar, checkpoint]
 
-    def trainer(self, init_metadata: Metadata):
-        raise NotImplementedError()
+    def trainer(self, init_metadata: Metadata) -> pl.Trainer:
+        raise NotImplementedError("Should be implemented by subclass")
+
+    def run_init(self, init_metadata: Metadata, trainer: pl.Trainer):
+        raise NotImplementedError("Should be implemented by subclass")
 
     def generate_init_metadata(
         self, training_job_metadata: Metadata
@@ -67,13 +56,15 @@ class TrainingJob:
             init_id, init_metadata = str(i), training_job_metadata
             yield init_id, init_metadata
 
-    def run_init(self, init_metadata: Metadata, trainer: pl.Trainer):
-        raise NotImplementedError()
+    def run(self, n_processes: int = 4):
+        self._save_training_job_info()
 
-    def _save_init_metadata(self, init_id: str, init_metadata: Metadata):
-        with open(self.output_path / "init_metadata.jsonl", "a") as f:
-            metadata_dict = {"init_id": init_id, **asdict(init_metadata)}
-            f.write(json.dumps(metadata_dict) + "\n")
+        init_metadata_iter = self.generate_init_metadata(self.metadata)
+        with Pool(n_processes) as pool:
+            pool.map(self._run_init_wrapper, init_metadata_iter)
+
+        if self.metadata.gcs_bucket:
+            self._save_outputs_to_gcs()
 
     def _run_init_wrapper(self, init_id_and_metadata: Tuple[str, Metadata]):
         init_id, init_metadata = init_id_and_metadata
@@ -84,13 +75,24 @@ class TrainingJob:
 
         self.run_init(init_metadata, trainer)
 
-    def run_dist(self, n_processes=4):
-        init_metadata_iter = self.generate_init_metadata(self.metadata)
-        with Pool(n_processes) as pool:
-            pool.map(self._run_init_wrapper, init_metadata_iter)
+    def _save_training_job_info(self):
+        if not self.output_path.exists():
+            os.makedirs(self.output_path)
 
-        if self.metadata.gcs_bucket:
-            self._save_outputs_to_gcs()
+        # Save training job metadata
+        with open(self.output_path / "training_job_metadata.json", "w") as f:
+            json.dump(asdict(self.metadata), f)
+
+        # Save the model as torchscript
+        # Model initialization is currently using job metadata, not init metadata :(
+        model = self.model(self.metadata)
+        scripted_model = model.to_torchscript()
+        t.jit.save(scripted_model, self.output_path / "model_torchscript.pt")
+
+    def _save_init_metadata(self, init_id: str, init_metadata: Metadata):
+        with open(self.output_path / "init_metadata.jsonl", "a") as f:
+            metadata_dict = {"init_id": init_id, **asdict(init_metadata)}
+            f.write(json.dumps(metadata_dict) + "\n")
 
     def _save_outputs_to_gcs(self):
         print(
