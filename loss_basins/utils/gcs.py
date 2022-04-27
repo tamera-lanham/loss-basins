@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 from google.cloud import storage
 from google.oauth2 import service_account
 from pathlib import Path

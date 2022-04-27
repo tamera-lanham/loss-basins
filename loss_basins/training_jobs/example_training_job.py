@@ -22,6 +22,7 @@ class IdentityDataset(Dataset):
 
 @dataclass
 class ExampleJobMetadata(Metadata):
+    description: str = "Example job for testing the TrainingJob class"
     n_inputs: int = 16
     batch_size: int = 32
     n_batches: int = 500
