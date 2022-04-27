@@ -1,4 +1,5 @@
 from loss_basins.utils.gcs import *
+import shutil
 
 
 def test_init():

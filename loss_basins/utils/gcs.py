@@ -6,8 +6,6 @@ from google.oauth2 import service_account
 from pathlib import Path
 from typing import Optional, Union
 
-from numpy import isin
-
 
 class GCS:
     def __init__(self, bucket_name: str, key_path: Optional[Union[Path, str]] = None):
