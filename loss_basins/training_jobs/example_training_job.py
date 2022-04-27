@@ -1,27 +1,60 @@
 from dataclasses import dataclass
-from typing import Tuple
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import TQDMProgressBar
+import torch as t
+from torch.utils.data import Dataset, DataLoader
+import torch.nn as nn
 
-from loss_basins.callbacks import SaveModelState
-from loss_basins.data import mnist_loader
-from loss_basins.models import MnistLightning
+from loss_basins.models import LightningModel
 from loss_basins.training_jobs.training_job import TrainingJob, Metadata
+
+
+class IdentityDataset(Dataset):
+    def __init__(self, shape, n_batches):
+        self.data = [t.randn(shape) for _ in range(n_batches)]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        X = self.data[idx]
+        return (X, X)
 
 
 @dataclass
 class ExampleJobMetadata(Metadata):
-    lr: float = 1e-3
-    epochs: int = 3
+    n_inputs: int = 16
+    batch_size: int = 32
+    n_batches: int = 500
+    epochs: int = 5
 
 
 class ExampleTrainingJob(TrainingJob):
-    def model(self, metadata: ExampleJobMetadata):
-        return MnistLightning()
+    def model(self, metadata: ExampleJobMetadata) -> pl.LightningModule:
+
+        input_size = metadata.n_inputs
+        hidden_size = metadata.n_inputs * 4
+        output_size = metadata.n_inputs
+
+        torch_model = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, output_size),
+        )
+        return LightningModel(torch_model, loss_fn=nn.MSELoss())
 
     def data_loaders(self, metadata: ExampleJobMetadata):
-        train_loader = mnist_loader(100, train=True, num_workers=8)
-        val_loader = mnist_loader(100, train=False, num_workers=1)
+
+        train_loader = DataLoader(
+            IdentityDataset(
+                (metadata.batch_size, metadata.n_inputs), metadata.n_batches
+            )
+        )
+        val_loader = DataLoader(
+            IdentityDataset(
+                (metadata.batch_size, metadata.n_inputs), metadata.n_batches // 5
+            )
+        )
+
         return train_loader, val_loader
 
     def trainer(self, init_metadata: ExampleJobMetadata):

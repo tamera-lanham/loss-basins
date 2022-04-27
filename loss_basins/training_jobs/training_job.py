@@ -75,6 +75,13 @@ class TrainingJob:
 
         self.run_init(init_metadata, trainer)
 
+    def _test_run(self):
+        train_loader, val_loader = self.data_loaders(self.metadata)
+        model = self.model(self.metadata)
+        trainer = self.trainer(self.metadata)
+
+        trainer.fit(model, train_loader, val_loader)
+
     def _save_training_job_info(self):
         if not self.output_path.exists():
             os.makedirs(self.output_path)
