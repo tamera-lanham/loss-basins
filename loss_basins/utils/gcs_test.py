@@ -54,7 +54,7 @@ def test_upload():
     )
 
     # Clean up GCS
-    blobs = gcs.bucket.list_blobs(prefix="test_files")
+    blobs = gcs.bucket.list_blobs(prefix="test-folder")
     gcs.bucket.delete_blobs(list(blobs))
 
     # Clean up local
