@@ -30,7 +30,7 @@ class SaveModelState(Callback):
 
         if self.save_val_outputs:
             # Create dir for val outputs
-            self.val_outputs_dir = self.output_path / "val_ouputs"
+            self.val_outputs_dir = self.output_path / "val_outputs"
             if not self.val_outputs_dir.exists():
                 os.makedirs(self.val_outputs_dir)
 
@@ -40,7 +40,10 @@ class SaveModelState(Callback):
         state_name = self._state_name(epoch, batch)
 
         # Save parameters
-        t.save(pl_module.state_dict(), self.parameter_checkpoints_dir / state_name)
+        t.save(
+            pl_module.state_dict(),
+            self.parameter_checkpoints_dir / (state_name + ".pt"),
+        )
 
         # Save metrics
         metrics = {
@@ -74,11 +77,18 @@ class SaveModelState(Callback):
 
     def on_validation_batch_end(self, _, __, outputs, *___):
         if self.save_val_outputs:
-            self.val_outputs.append(outputs)
+            _, y_pred = outputs
+            self.val_outputs.append(y_pred)
 
-    def on_validation_epoch_end(self, trainer, _) -> None:
+    def on_validation_end(self, trainer, _) -> None:
         if self.save_val_outputs:
-            print(self.val_outputs)
+            val_outputs = t.cat(self.val_outputs, dim=-2).unsqueeze(dim=0)
+            t.save(
+                val_outputs,
+                self.val_outputs_dir
+                / (self._state_name(trainer.current_epoch) + ".pt"),
+            )
+            self.val_outputs = []
 
     def on_train_epoch_end(self, trainer, pl_module):
         if self.every_n_epochs and trainer.current_epoch % self.every_n_epochs == 0:

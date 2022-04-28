@@ -33,17 +33,17 @@ class LightningModel(pl.LightningModule):
         X, y = batch
         y_pred = self.model(X)
         loss = self.loss_fn(y_pred, y)
-        return loss
+        return loss, y_pred
 
     def training_step(self, batch, batch_idx):
-        loss = self._get_loss(batch)
+        loss, _ = self._get_loss(batch)
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
     def validation_step(self, batch, _):
-        loss = self._get_loss(batch)
+        loss, y_pred = self._get_loss(batch)
         self.log("val_loss", loss, prog_bar=True)
-        return loss
+        return loss, y_pred
 
     def configure_optimizers(self):
         optimizer = self.optimizer_class(

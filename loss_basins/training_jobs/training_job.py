@@ -44,9 +44,7 @@ class TrainingJob:
         progress_bar = pl.callbacks.TQDMProgressBar()
 
         checkpoint = SaveModelState(
-            self.output_path / "inits" / init_id,
-            every_n_epochs=1,
-            save_val_outputs=False,
+            self.output_path / "inits" / init_id, every_n_epochs=1
         )
 
         return [progress_bar, checkpoint]
