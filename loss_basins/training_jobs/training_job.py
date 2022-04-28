@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import pytorch_lightning as pl
+import subprocess
 import torch as t
 from typing import Iterable, Optional, Tuple
 
@@ -18,6 +19,16 @@ class Metadata:
     most_recent_commit_hash: str = ""
     n_init_repeats: int = 1
     gcs_bucket: Optional[str] = None
+
+    def __post_init__(self):
+        self.most_recent_commit_hash = self._current_commit_hash()
+
+    def _current_commit_hash(self) -> str:
+        return (
+            subprocess.check_output(["git", "rev-parse", "HEAD"])
+            .decode("ascii")
+            .strip()
+        )
 
 
 class TrainingJob:
