@@ -83,14 +83,14 @@ class CifarDoubleDescentJob(TrainingJob):
             transform=transform_train,
         )
         trainloader_ln = DataLoader(
-            trainset_ln, batch_size=metadata.batch_size, shuffle=True, num_workers=2
+            trainset_ln, batch_size=metadata.batch_size, shuffle=True, num_workers=1
         )
 
         testset = CIFAR10(
             root=data_path, train=False, download=True, transform=transform_test
         )
         testloader = DataLoader(
-            testset, batch_size=metadata.batch_size, shuffle=False, num_workers=2
+            testset, batch_size=metadata.batch_size, shuffle=False, num_workers=1
         )
 
         return trainloader_ln, testloader
