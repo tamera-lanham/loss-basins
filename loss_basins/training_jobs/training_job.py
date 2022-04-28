@@ -44,7 +44,9 @@ class TrainingJob:
         progress_bar = pl.callbacks.TQDMProgressBar()
 
         checkpoint = SaveModelState(
-            self.output_path / "inits" / init_id, every_n_epochs=1
+            self.output_path / "inits" / init_id,
+            every_n_epochs=1,
+            save_val_outputs=False,
         )
 
         return [progress_bar, checkpoint]
@@ -85,19 +87,15 @@ class TrainingJob:
 
         self._save_init_metadata(init_id, init_metadata)
         trainer = self.trainer(init_metadata)
-        trainer.callbacks = trainer.callbacks + self.callbacks(init_id, init_metadata)
+        trainer.callbacks += self.callbacks(init_id, init_metadata)
 
         # May have to manually set trainer.gpus here from process rank if pl doesn't schedule properly
 
         self.run_init(init_metadata, trainer)
 
     def _test_run(self):
-        # Just to see if something isn't working :)
-        train_loader, val_loader = self.data_loaders(self.metadata)
-        model = self.model(self.metadata)
-        trainer = self.trainer(self.metadata)
-
-        trainer.fit(model, train_loader, val_loader)
+        # Just to see if something isn't working
+        self.run_init(self.metadata, self.trainer(self.metadata))
 
     def _save_training_job_info(self):
         if not self.output_path.exists():
@@ -108,7 +106,7 @@ class TrainingJob:
             json.dump(asdict(self.metadata), f)
 
         # Save the model as torchscript
-        # Model initialization is currently using job metadata, not init metadata :(
+        # Model initialization is currently using job metadata, not init metadata
         model = self.model(self.metadata)
         scripted_model = model.to_torchscript()
         t.jit.save(scripted_model, self.output_path / "model_torchscript.pt")
