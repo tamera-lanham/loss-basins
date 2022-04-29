@@ -27,7 +27,7 @@ class LightningModel(pl.LightningModule):
         self.optimizer_kwargs = {**default_opt_kwargs, **optimizer_kwargs}
 
     def forward(self, x):
-        self.model(x)
+        return self.model(x)
 
     def _get_loss(self, batch):
         X, y = batch
