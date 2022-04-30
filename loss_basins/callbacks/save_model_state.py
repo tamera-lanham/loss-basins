@@ -71,7 +71,7 @@ class SaveModelState(Callback):
                 trainer, pl_module, epoch=trainer.current_epoch, batch=batch_idx
             )
 
-    def on_epoch_end(self, trainer, pl_module):
+    def on_train_epoch_end(self, trainer, pl_module):
         if self.every_n_epochs and trainer.current_epoch % self.every_n_epochs == 0:
             self._save_state(trainer, pl_module, epoch=trainer.current_epoch)
 
