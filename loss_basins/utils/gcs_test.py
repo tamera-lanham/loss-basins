@@ -34,28 +34,30 @@ def test_upload():
         {"dir2": ["file6", "file7"]},
     ]
 
-    output_dir = "./_data/test_files"
-    make_test_files(file_structure, output_dir)
+    try:
+        output_dir = "./_data/test_files"
+        make_test_files(file_structure, output_dir)
 
-    gcs = GCS("loss-basins")
-    gcs.upload(output_dir, "test-folder")
+        gcs = GCS("loss-basins")
+        gcs.upload(output_dir, "test-folder")
 
-    assert (
-        gcs.bucket.get_blob("test-folder/dir1/dir3/file1").download_as_text()
-        == "file1 contents"
-    )
-    assert (
-        gcs.bucket.get_blob("test-folder/dir1/file4").download_as_text()
-        == "file4 contents"
-    )
-    assert (
-        gcs.bucket.get_blob("test-folder/dir2/file7").download_as_text()
-        == "file7 contents"
-    )
+        assert (
+            gcs.bucket.get_blob("test-folder/dir1/dir3/file1").download_as_text()
+            == "file1 contents"
+        )
+        assert (
+            gcs.bucket.get_blob("test-folder/dir1/file4").download_as_text()
+            == "file4 contents"
+        )
+        assert (
+            gcs.bucket.get_blob("test-folder/dir2/file7").download_as_text()
+            == "file7 contents"
+        )
 
-    # Clean up GCS
-    blobs = gcs.bucket.list_blobs(prefix="test-folder")
-    gcs.bucket.delete_blobs(list(blobs))
+    finally:
+        # Clean up GCS
+        blobs = gcs.bucket.list_blobs(prefix="test-folder")
+        gcs.bucket.delete_blobs(list(blobs))
 
-    # Clean up local
-    shutil.rmtree(output_dir)
+        # Clean up local
+        shutil.rmtree(output_dir)
