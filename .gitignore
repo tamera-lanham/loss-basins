@@ -10,3 +10,6 @@ _data/
 _keys/
 lightning_logs/
 sandbox.*
+
+.venv/
+.conda-env/

@@ -1,4 +1,6 @@
 from concurrent.futures import ProcessPoolExecutor as Pool
+from multiprocessing import get_context
+
 from dataclasses import dataclass, asdict
 import json
 import os
@@ -77,7 +79,7 @@ class TrainingJob:
             n_processes = 4
 
         init_metadata_iter = self.generate_init_metadata(self.metadata)
-        with Pool(n_processes) as pool:
+        with Pool(n_processes, mp_context=get_context('spawn')) as pool:
             pool.map(self._run_init_wrapper, init_metadata_iter)
 
         if self.metadata.gcs_bucket:
