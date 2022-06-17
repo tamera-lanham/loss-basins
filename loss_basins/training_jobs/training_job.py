@@ -21,6 +21,7 @@ class Metadata:
     most_recent_commit_hash: str = ""
     n_init_repeats: int = 1
     gcs_bucket: Optional[str] = None
+    n_processes: int = 4
 
     def __post_init__(self):
         self.most_recent_commit_hash = self._current_commit_hash()
@@ -72,14 +73,11 @@ class TrainingJob:
 
         trainer.fit(model, train_loader, val_loader)
 
-    def run(self, n_processes: Optional[int] = None):
+    def run(self):
         self._save_training_job_info()
 
-        if not n_processes:
-            n_processes = 4
-
         init_metadata_iter = self.generate_init_metadata(self.metadata)
-        with Pool(n_processes, mp_context=get_context("spawn")) as pool:
+        with Pool(self.metadata.n_processes, mp_context=get_context("spawn")) as pool:
             pool.map(self._run_init_wrapper, init_metadata_iter)
 
         if self.metadata.gcs_bucket:
@@ -101,6 +99,9 @@ class TrainingJob:
         trainer.callbacks += self.callbacks(init_id, init_metadata)
 
         # May have to manually set trainer.gpus here from process rank if pl doesn't schedule properly
+        gpu_index = init_id % self.metadata.n_processes
+        if t.cuda.is_available():
+            trainer.gpus = [gpu_index]
 
         self.run_init(init_metadata, trainer)
 

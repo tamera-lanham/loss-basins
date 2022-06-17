@@ -55,9 +55,9 @@ def test_upload():
         )
 
     finally:
+        # Clean up local
+        shutil.rmtree(output_dir)
+
         # Clean up GCS
         blobs = gcs.bucket.list_blobs(prefix="test-folder")
         gcs.bucket.delete_blobs(list(blobs))
-
-        # Clean up local
-        shutil.rmtree(output_dir)
