@@ -16,3 +16,6 @@ poetry install
 ```
 
 Once you've run this once, you should be able to reenter the proejct environment with `conda activate ./.env` whenever you start a new terminal session. 
+
+
+If you want to use GCS (Google Cloud Storage), you'll also need to ask Tamera for the GCS key file. Once you have it you should create a directory called `_keys` under the repo root and move the key file into that directory.

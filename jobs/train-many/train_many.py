@@ -66,7 +66,7 @@ class Parameters:
 
     output_dir: Optional[Path] = None
     save_to_gcs: bool = True
-    gcs_bucket_name: str = "loss-basins"
+    gcs_bucket_name: str = "mega-experiment"
     gcs_output_dir: Optional[str] = None
 
     def __post_init__(self):
@@ -100,8 +100,8 @@ def setup(params: Parameters):
         gcs_file.upload_from_filename(params.output_dir.joinpath("params.pt"))
 
 
-def get_gcs_bucket(name="loss-basins"):
-    with open("_keys/trim-keel-346317-aae7b66dbc69.json") as source:
+def get_gcs_bucket(name="mega-experiment"):
+    with open("_keys/inductive-bias-a1f68d72e81a.json") as source:
         info = json.load(source)
 
     storage_credentials = service_account.Credentials.from_service_account_info(info)

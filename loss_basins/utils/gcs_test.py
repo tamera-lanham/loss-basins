@@ -3,7 +3,7 @@ import shutil
 
 
 def test_init():
-    gcs = GCS("loss-basins")
+    gcs = GCS("mega-experiment")
     assert isinstance(gcs.bucket, storage.Bucket)
     blobs = list(gcs.bucket.list_blobs(max_results=3))
     assert isinstance(blobs[0], storage.Blob)
@@ -38,7 +38,7 @@ def test_upload():
         output_dir = "./_data/test_files"
         make_test_files(file_structure, output_dir)
 
-        gcs = GCS("loss-basins")
+        gcs = GCS("mega-experiment")
         gcs.upload(output_dir, "test-folder")
 
         assert (

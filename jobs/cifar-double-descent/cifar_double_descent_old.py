@@ -111,7 +111,7 @@ def train(params: Parameters, train_loader, val_loader, output_path: str):
 
     progress_bar = TQDMProgressBar()
     checkpoint = SaveModelState(output_path, every_n_epochs=1)
-    copy_to_gcs = CopyToGCS(output_path, "loss-basins", Path(output_path).name)
+    copy_to_gcs = CopyToGCS(output_path, "mega-experiment", Path(output_path).name)
 
     trainer = pl.Trainer(
         accelerator=params.device_type,
