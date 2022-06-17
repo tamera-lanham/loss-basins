@@ -12,4 +12,5 @@ lightning_logs/
 sandbox.*
 
 .venv/
+.env/
 .conda-env/
