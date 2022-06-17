@@ -95,10 +95,8 @@ class CifarDoubleDescentJob(TrainingJob):
 
         return trainloader_ln, testloader
 
-    def trainer(self, init_metadata: CifarDoubleDescentJobMetadata):
+    def trainer(
+        self, init_metadata: CifarDoubleDescentJobMetadata, default_trainer_kwargs: dict
+    ) -> Trainer:
 
-        trainer = Trainer(
-            **self.default_trainer_kwargs, max_epochs=init_metadata.epochs
-        )
-
-        return trainer
+        return Trainer(**default_trainer_kwargs, max_epochs=init_metadata.epochs)

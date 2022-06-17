@@ -63,7 +63,9 @@ class TrainingJob:
 
         return [progress_bar, checkpoint]
 
-    def trainer(self, init_metadata: Metadata) -> pl.Trainer:
+    def trainer(
+        self, init_metadata: Metadata, default_trainer_kwargs: dict
+    ) -> pl.Trainer:
         raise NotImplementedError("Should be implemented by subclass")
 
     def run_init(self, init_metadata: Metadata, trainer: pl.Trainer):
@@ -95,13 +97,16 @@ class TrainingJob:
         init_id, init_metadata = init_id_and_metadata
 
         self._save_init_metadata(init_id, init_metadata)
-        trainer = self.trainer(init_metadata)
-        trainer.callbacks += self.callbacks(init_id, init_metadata)
 
         # May have to manually set trainer.gpus here from process rank if pl doesn't schedule properly
-        gpu_index = init_id % self.metadata.n_processes
         if t.cuda.is_available():
-            trainer.gpus = [gpu_index]
+            gpu_index = int(init_id) % t.cuda.device_count()
+            trainer_kwargs = {**self.default_trainer_kwargs, "gpus": [gpu_index]}
+        else:
+            trainer_kwargs = self.default_trainer_kwargs
+
+        trainer = self.trainer(init_metadata, trainer_kwargs)
+        trainer.callbacks += self.callbacks(init_id, init_metadata)
 
         self.run_init(init_metadata, trainer)
 

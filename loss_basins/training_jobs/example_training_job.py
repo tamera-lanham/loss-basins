@@ -58,8 +58,8 @@ class ExampleTrainingJob(TrainingJob):
 
         return train_loader, val_loader
 
-    def trainer(self, init_metadata: ExampleJobMetadata):
+    def trainer(
+        self, init_metadata: ExampleJobMetadata, default_trainer_kwargs: dict
+    ) -> pl.Trainer:
 
-        return pl.Trainer(
-            **self.default_trainer_kwargs, max_epochs=init_metadata.epochs
-        )
+        return pl.Trainer(**default_trainer_kwargs, max_epochs=init_metadata.epochs)
